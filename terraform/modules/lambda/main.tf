@@ -5,7 +5,7 @@ resource "aws_lambda_function" "lambda" {
   role             = var.role_arn
   handler          = var.handler
   publish          = true
-  runtime          = "python3.9"
+  runtime          = "go1.x"
   timeout          = 10
   memory_size      = 128
   filename         = "${path.module}/../../../${var.filename}"
@@ -30,6 +30,9 @@ resource "aws_lambda_function" "lambda" {
     }
   }
 
+  #  lifecycle {
+  #    prevent_destroy = true
+  #  }
 
   tags       = var.tags
   depends_on = [
@@ -37,12 +40,12 @@ resource "aws_lambda_function" "lambda" {
   ]
 }
 
-resource "aws_lambda_alias" "live" {
-  name             = "live"
-  description      = "set a live alias for ${var.function_name}"
-  function_name    = aws_lambda_function.lambda.arn
-  function_version = aws_lambda_function.lambda.version
-}
+#resource "aws_lambda_alias" "live" {
+#  name             = "live"
+#  description      = "set a live alias for ${var.function_name}"
+#  function_name    = aws_lambda_function.lambda.arn
+#  function_version = aws_lambda_function.lambda.version
+#}
 
 
 resource "aws_cloudwatch_log_group" "log_groups" {
@@ -52,22 +55,25 @@ resource "aws_cloudwatch_log_group" "log_groups" {
 
 
 ## Event Bridge Cron
-#resource "aws_cloudwatch_event_rule" "every_one_hour" {
-#  name                = "addonsbilling-startUsageImport-everyOneHour"
-#  description         = "Fires every one hour addonsbilling-startUsageImport lambda"
-#  schedule_expression = "rate(1 hour)"
-#  tags                = var.tags
-#}
-#
-#resource "aws_cloudwatch_event_target" "start_usage_import_every_one_hour" {
-#  rule = aws_cloudwatch_event_rule.every_one_hour.name
-#  arn  = aws_lambda_function.start_usage_import.arn
-#}
-#
-#resource "aws_lambda_permission" "cloudwatch_to_call_start_usage_import" {
-#  statement_id  = "AllowExecutionFromCloudWatch"
-#  action        = "lambda:InvokeFunction"
-#  function_name = aws_lambda_function.start_usage_import.function_name
-#  principal     = "events.amazonaws.com"
-#  source_arn    = aws_cloudwatch_event_rule.every_one_hour.arn
-#}
+resource "aws_cloudwatch_event_rule" "rule" {
+  count               = length(var.event_rules)
+  name                = "${var.function_name}-${var.event_rules[count.index].name}-event"
+  description         = "Fires event for ${var.function_name} lambda"
+  schedule_expression = var.event_rules[count.index].value
+  tags                = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "target" {
+  count = length(var.event_rules)
+  rule  = aws_cloudwatch_event_rule.rule[count.index].name
+  arn   = aws_lambda_function.lambda.arn
+}
+
+resource "aws_lambda_permission" "cloudwatch_to_call_event" {
+  count         = length(var.event_rules)
+  statement_id  = "AllowExecutionFromCloudWatch-rule-${var.event_rules[count.index].name}"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.rule[count.index].arn
+}

@@ -32,8 +32,13 @@ variable "description" {
   description = "Description of what your Lambda Function does."
 }
 
+variable "event_rules" {
+  type        = list(map(string))
+  default     = []
+  description = "Event Bridge event rule."
+}
 variable "tags" {
-  type    = map(string)
+  type = map(string)
   default = {
     Terraform = "managed"
   }
@@ -54,7 +59,7 @@ variable "subnet_ids" {
 variable "environment" {
   description = "Environment (e.g. env variables) configuration for the Lambda function enable you to dynamically pass settings to your function code and libraries"
   default     = null
-  type        = object({
+  type = object({
     variables = map(string)
   })
 }
@@ -62,7 +67,7 @@ variable "environment" {
 variable "vpc_config" {
   description = "Provide this to allow your function to access your VPC (if both 'subnet_ids' and 'security_group_ids' are empty then vpc_config is considered to be empty or unset, see https://docs.aws.amazon.com/lambda/latest/dg/vpc.html for details)."
   type        = map(list(string))
-  default     = {
+  default = {
     "security_group_ids" : [],
     "subnet_ids" : []
   }
