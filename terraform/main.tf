@@ -74,8 +74,14 @@ module "lambda" {
       "value": "rate(1 hour)"
     },
     {
-      "name": "two-hour",
-      "value": "rate(2 hours)"
+      "name" : "two-hour",
+      "value" : "rate(2 hours)"
+      "input" : jsonencode(
+        {
+          "test1" : "hello1",
+          "final" : "false"
+        }
+      )
     }
   ]
 }

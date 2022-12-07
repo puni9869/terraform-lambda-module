@@ -53,7 +53,6 @@ resource "aws_cloudwatch_log_group" "log_groups" {
   retention_in_days = 400
 }
 
-
 ## Event Bridge Cron
 resource "aws_cloudwatch_event_rule" "rule" {
   count               = length(var.event_rules)
@@ -67,6 +66,7 @@ resource "aws_cloudwatch_event_target" "target" {
   count = length(var.event_rules)
   rule  = aws_cloudwatch_event_rule.rule[count.index].name
   arn   = aws_lambda_function.lambda.arn
+  input = lookup(var.event_rules[count.index], "input", null)
 }
 
 resource "aws_lambda_permission" "cloudwatch_to_call_event" {
